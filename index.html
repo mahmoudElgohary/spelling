@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Spelling Blind Spots</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500&family=IBM+Plex+Serif:wght@600&display=swap">
+<style>
+:root{
+  --bg:#F5F7F8; --surface:#FFFFFF; --sunk:#EDF1F3;
+  --ink:#141A1F; --muted:#5D6B78; --faint:#8A97A3;
+  --line:#E0E6EA; --line-strong:#C9D3DA;
+  --wrong:#B23A2E; --wrong-bg:#FBEDEB;
+  --right:#0E6B53; --right-bg:#E6F3EF;
+  --accent:#16607D; --accent-bg:#E4EFF4;
+  --shadow:0 1px 2px rgba(20,26,31,.05);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#10151A; --surface:#181F26; --sunk:#141A20;
+  --ink:#E7EDF2; --muted:#94A3B0; --faint:#6B7885;
+  --line:#28313A; --line-strong:#3A4550;
+  --wrong:#EE8377; --wrong-bg:#2B1C1A;
+  --right:#4FC7A0; --right-bg:#13261F;
+  --accent:#6FC2E0; --accent-bg:#122630;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#10151A; --surface:#181F26; --sunk:#141A20;
+  --ink:#E7EDF2; --muted:#94A3B0; --faint:#6B7885;
+  --line:#28313A; --line-strong:#3A4550;
+  --wrong:#EE8377; --wrong-bg:#2B1C1A;
+  --right:#4FC7A0; --right-bg:#13261F;
+  --accent:#6FC2E0; --accent-bg:#122630;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; margin:0;
+  padding-block:0 64px; padding-left:16px; padding-right:16px;
+}
+.wrap{max-width:760px;margin:0 auto}
+
+/* ---- header ---- */
+header{padding-block:40px 20px;border-bottom:2px solid var(--line-strong)}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 10px}
+h1{font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;font-size:clamp(28px,6vw,40px);line-height:1.12;margin:0 0 12px;text-wrap:balance}
+.lede{color:var(--muted);margin:0;max-width:56ch}
+.lede b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ---- controls ---- */
+.controls{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+  background:var(--bg); border-bottom:1px solid var(--line);
+  padding-block:12px; margin-bottom:8px;
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+}
+.search{
+  flex:1 1 180px; min-width:0; font:inherit; color:var(--ink);
+  background:var(--surface); border:1px solid var(--line-strong);
+  border-radius:7px; padding:8px 11px;
+}
+.search::placeholder{color:var(--faint)}
+.search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tgl{
+  font:inherit; font-size:13px; font-weight:500; color:var(--muted);
+  background:var(--surface); border:1px solid var(--line-strong);
+  border-radius:7px; padding:8px 12px; cursor:pointer; white-space:nowrap;
+}
+.tgl:hover{border-color:var(--accent);color:var(--ink)}
+.tgl[aria-pressed="true"]{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.tgl:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---- progress ---- */
+.prog{display:flex;align-items:center;gap:10px;padding-block:10px 18px;font-size:12px;color:var(--muted)}
+.bar{flex:1;height:5px;background:var(--sunk);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--right);border-radius:3px;transition:width .25s}
+.prog b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+
+/* ---- section ---- */
+section{margin-block:34px 0}
+.shead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:4px}
+.shead h2{font-family:"IBM Plex Serif",Georgia,serif;font-size:20px;font-weight:600;margin:0}
+.shead .ar{font-family:"IBM Plex Sans Arabic",sans-serif;color:var(--accent);font-size:15px;font-weight:500}
+.shead .n{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums;color:var(--faint)}
+.srule{color:var(--muted);font-size:13.5px;margin:0 0 6px;max-width:62ch}
+.srule code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--sunk);padding:1px 5px;border-radius:4px}
+
+/* ---- word row ---- */
+.word{
+  border-top:1px solid var(--line);
+  padding-block:13px;
+  display:grid; grid-template-columns:1fr auto; gap:4px 14px; align-items:baseline;
+}
+.word:last-child{border-bottom:1px solid var(--line)}
+.word.done .spell{opacity:.45}
+.spell{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.bad{color:var(--wrong);text-decoration:line-through;text-decoration-thickness:1.5px;font-weight:500}
+.arrow{color:var(--faint);margin:0 5px;font-weight:400}
+.good{color:var(--right)}
+.ar{
+  font-family:"IBM Plex Sans Arabic",sans-serif; font-size:14.5px; color:var(--ink);
+  direction:rtl; text-align:right; grid-column:2; grid-row:1;
+}
+.line2{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px;margin-top:3px}
+.say{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--sunk);border-radius:20px;padding:3px 10px 3px 3px;
+}
+.say code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--muted);letter-spacing:-.01em}
+.phrase{color:var(--muted);font-size:13.5px;flex:1 1 240px;min-width:0}
+.phrase b{color:var(--ink);font-weight:600}
+
+/* ---- buttons ---- */
+.play{
+  border:none;background:var(--accent);color:var(--surface);
+  width:24px;height:24px;border-radius:50%;flex:none;
+  display:inline-grid;place-items:center;cursor:pointer;padding:0;
+}
+.play svg{width:10px;height:10px;fill:currentColor;transform:translateX(1px)}
+.play:hover{filter:brightness(1.15)}
+.play:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.play.ghost{background:transparent;color:var(--accent);border:1px solid var(--line-strong);width:22px;height:22px}
+.play.ghost:hover{background:var(--accent-bg)}
+.play.on{animation:pulse .7s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(.85);opacity:.7}}
+.mark{
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--faint);
+  width:22px;height:22px;border-radius:5px;cursor:pointer;flex:none;
+  display:inline-grid;place-items:center;font-size:12px;line-height:1;padding:0;
+}
+.mark:hover{border-color:var(--right);color:var(--right)}
+.word.done .mark{background:var(--right-bg);border-color:var(--right);color:var(--right)}
+.mark:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.part{margin-top:44px;padding-top:20px;border-top:2px solid var(--line-strong)}
+.part:first-child{margin-top:14px;border-top:none;padding-top:0}
+.ptitle{font-family:"IBM Plex Serif",Georgia,serif;font-size:clamp(22px,4.5vw,28px);font-weight:600;margin:0 0 4px;text-wrap:balance}
+.psub{color:var(--muted);font-size:13.5px;margin:0}
+.freq{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;color:var(--accent);background:var(--accent-bg);border-radius:10px;padding:1px 7px;margin-left:8px;vertical-align:2px;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;gap:4px;flex-wrap:wrap}
+
+.gtag{display:none}
+body.searching .part,body.searching .shead,body.searching .srule{display:none}
+body.searching section{margin:0}
+body.searching .gtag{display:inline-block;margin-left:10px;font-size:11px;font-weight:500;letter-spacing:.02em;color:var(--faint);border:1px solid var(--line);border-radius:10px;padding:1px 8px;vertical-align:2px}
+
+/* ---- practice mode ---- */
+body.practice .miss .good{filter:blur(6px);cursor:pointer;user-select:none}
+body.practice .miss .phrase b{filter:blur(5px)}
+body.practice .vocab .ar{filter:blur(6px);cursor:pointer;user-select:none}
+body.practice .word.shown .good,body.practice .word.shown .phrase b,body.practice .word.shown .ar{filter:none}
+
+.note{
+  background:var(--wrong-bg);border:1px solid var(--wrong);color:var(--wrong);
+  border-radius:8px;padding:10px 13px;font-size:13px;margin-block:14px;
+}
+.empty{color:var(--faint);padding:24px 0;font-size:14px}
+.hint{color:var(--muted);font-size:13px;margin:4px 0 0;padding:8px 12px;background:var(--sunk);border-radius:7px}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media print{
+  body{background:#fff;color:#000;padding:0;font-size:11pt}
+  .controls,.prog,.play,.mark,footer,.note{display:none!important}
+  section{break-inside:avoid} .word{break-inside:avoid;padding-block:7px}
+  .bad{color:#000} .good{color:#000;text-decoration:underline}
+  body.practice .good,body.practice .phrase b,body.practice .ar{filter:none}
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <p class="eyebrow">29 projects · 1,822 of your messages · 11,954 of my replies</p>
+  <h1>Spelling Blind Spots</h1>
+  <p class="lede"><b id="cMiss">0</b> words you misspelled across every project on this account, plus <b id="cVocab">0</b> words I use most when I reply to you. Tap <span style="color:var(--accent)">▶</span> to hear it in an American accent.</p>
+</header>
+
+<div class="controls">
+  <input class="search" id="q" type="search" placeholder="Search a word…" aria-label="Search words">
+  <div class="seg" role="group" aria-label="Show">
+    <button class="tgl" data-show="all" aria-pressed="true">All</button>
+    <button class="tgl" data-show="miss" aria-pressed="false">Misspelled</button>
+    <button class="tgl" data-show="vocab" aria-pressed="false">Claude's words</button>
+  </div>
+  <button class="tgl" id="practice" aria-pressed="false">Practice mode</button>
+  <button class="tgl" id="slow" aria-pressed="false">Slow</button>
+  <button class="tgl" id="print">Print</button>
+</div>
+
+<div class="prog">
+  <span>Learned</span>
+  <div class="bar"><i id="barfill"></i></div>
+  <b id="progtxt">0 / 0</b>
+</div>
+
+<div id="note" class="note" hidden></div>
+<p class="hint" id="hint" hidden></p>
+<div id="list"></div>
+<p class="empty" id="empty" hidden>Nothing matches that search — not in the words, the Arabic or the example sentences.</p>
+
+<footer>Pronunciations are respellings, not IPA — capitals mark the stressed syllable. Claude's counts come from 11,954 reply blocks across all 29 projects, with code, file paths and links stripped out. Voice comes from your browser's built-in US English speech.</footer>
+</div>
+
+<script>
+const GROUPS = [
+  {
+    t:"Missing or extra letters", ar:"حرف ناقص أو زائد",
+    rule:"A letter drops out of the middle, or one gets doubled by accident. Say the word syllable by syllable before typing: <code>sep-A-rate</code>, <code>gen-E-rate</code>, <code>con-fig-U-ration</code>.",
+    w:[
+      ["seprate · seperate · separete","separate","منفصل","Automation is a separate plan.","SEP-uh-rayt"],
+      ["nex","next","التالي","What's the next step?","NEKST"],
+      ["higest","highest","الأعلى","That's the highest price this week.","HY-ist"],
+      ["bigest","biggest","الأكبر","This is the biggest volume spike.","BIG-ist"],
+      ["genral","general","عام","Keep the general settings unchanged.","JEN-er-ul"],
+      ["genrate · genration · genrated","generate","يولّد","Generate the storyboard from the hints.","JEN-uh-rayt"],
+      ["indcator · indcate","indicator","مؤشر","This indicator doesn't indicate a reversal.","IN-dih-kay-ter"],
+      ["avilables · avalaible · avaliable","available","متاح","Show it only if data is available.","uh-VAY-luh-bul"],
+      ["recomendation · recomndation · recommedation · rocomend","recommendation","توصية","Send the recommendation to the channel.","rek-uh-men-DAY-shun"],
+      ["tecnicl","technical","فني، تحليل فني","Run the technical analysis on production.","TEK-nih-kul"],
+      ["scrit","script","سكربت","Run the replay script.","SKRIPT"],
+      ["psword · passwrod","password","كلمة المرور","Never store the password.","PASS-werd"],
+      ["postion · positon","position","مركز، صفقة","Close the position if price drops.","puh-ZISH-un"],
+      ["contnue","continue","يكمل","Let's continue the deploy.","kun-TIN-yoo"],
+      ["logn","login","تسجيل دخول","The login failed again.","LOG-in"],
+      ["markting","marketing","تسويق","Write the marketing text.","MAR-kuh-ting"],
+      ["changs · chages","changes","تغييرات","I didn't get the changes on the new branch.","CHAYN-jiz"],
+      ["shoud","should","يجب","The reviewer should not be the one who fixed it.","SHUUD"],
+      ["curent","current","الحالي","Show the current price only.","KER-unt"],
+      ["alocate","allocate","يخصص","Allocate the budget per type.","AL-uh-kayt"],
+      ["colapse","collapse","يطوي","Collapse the sidebar on mobile.","kuh-LAPS"],
+      ["configration","configuration","إعداد","Move it to the configuration file.","kun-fig-yuh-RAY-shun"],
+      ["pipline","pipeline","خط المعالجة","The build pipeline failed.","PYP-lyn"],
+      ["perimission","permission","إذن، صلاحية","The super admin grants the permission.","per-MISH-un"],
+      ["documntion","documentation","توثيق","Update the documentation after the release.","dok-yuh-men-TAY-shun"],
+      ["instrctor","instructor","مدرّب","The instructor assigns the experiment.","in-STRUK-ter"],
+      ["wich","which","أي، الذي","Tell me which file changed.","WICH"],
+      ["enviroment · envronoment","environment","بيئة","Set it in the environment file.","en-VY-run-munt"],
+      ["reagen","reagent","كاشف كيميائي","Open the reagent container first.","ree-AY-junt"],
+      ["pakages","packages","حزم","Install the missing packages.","PAK-ij-iz"],
+      ["futer","future","المستقبل","Keep it for a future release.","FYOO-cher"],
+      ["finall","final","نهائي","This is the final link.","FY-nul"],
+      ["adone","done","تم","It will be done by the super admin.","DUN"],
+      ["detrminstic","deterministic","حتمي","The replay must be deterministic.","dih-ter-muh-NIS-tik"],
+      ["nots","notes","ملاحظات","Add the meeting notes and the title.","NOHTS"],
+      ["suport","support","دعم","Contact support if the login fails.","suh-PORT"],
+      ["expermint","experiment","تجربة","Open the experiment in the lab.","ik-SPAIR-uh-munt"],
+      ["enlarg","enlarge","يكبّر","Enlarge the InstaPay image on click.","en-LARJ"],
+      ["deletation","deletion","حذف","Confirm the deletion first.","dih-LEE-shun"],
+      ["cann","can","يقدر","Can you check the logs?","KAN"],
+      ["automaticly","automatically","تلقائيًا","It restarts automatically.","aw-tuh-MAT-ik-lee"],
+      ["branchs","branches","فروع","Delete the old branches.","BRAN-chiz"],
+      ["laguages","languages","لغات","The app supports two languages.","LANG-gwij-iz"],
+      ["dvice","device","جهاز","I connected a real device.","dih-VYS"],
+      ["caled","called","استُدعي، اتسمّى","The function is called twice.","KAWLD"],
+      ["bakend","backend","السيرفر، الخلفية","Restart the backend.","BAK-end"],
+      ["waite","wait","ينتظر","Wait for the confirmation.","WAYT"],
+      ["proft","profit","ربح","Close half at the first profit target.","PROF-it"],
+      ["usaage","usage","استخدام","Check the API usage.","YOO-sij"],
+      ["updsert","upsert","إدخال أو تحديث","Upsert the row instead of inserting it.","UP-sert"],
+      ["ehance","enhance","يحسّن","Enhance the UI on mobile.","en-HANS"],
+      ["tartget","target","هدف","The first target was hit.","TAR-git"],
+      ["controle","control","تحكم","Give the admin full control.","kun-TROHL"],
+      ["artfacts","artifacts","ملفات ناتجة","Upload the build artifacts.","AR-tih-fakts"],
+      ["btween","between","بين","Split the features between the two apps.","bih-TWEEN"],
+      ["vailidate","validate","يتحقق من الصحة","Validate the form before saving.","VAL-ih-dayt"],
+      ["blokers","blockers","عوائق","List the blockers for this sprint.","BLOK-erz"],
+      ["browsening","browsing","التصفح","Keep browsing while it loads.","BROW-zing"]
+    ]
+  },
+  {
+    t:"Swapped look-alike letters", ar:"تبديل حروف متشابهة",
+    rule:"<code>s ↔ c</code> and <code>b ↔ p</code> — the two pairs Arabic does not separate the way English does. Rule of thumb: when /s/ comes before <code>e i y</code>, English usually writes <code>c</code>.",
+    w:[
+      ["persentage","percentage","نسبة مئوية","Show the percentage of average volume.","per-SEN-tij"],
+      ["extention · extenstion · extestion · extion","extension","امتداد، إضافة","Install the Chrome extension first.","ik-STEN-shun"],
+      ["supscribtion · supscription","subscription","اشتراك","His subscription expired today.","sub-SKRIP-shun"],
+      ["subscripter","subscriber","مشترك","Add the subscriber to the group.","sub-SKRY-ber"],
+      ["compatiple","compatible","متوافق","Is it compatible with Node 20?","kum-PAT-uh-bul"],
+      ["bage","page","صفحة","Enhance the UI on this page.","PAYJ"],
+      ["plured · plure","blurred","مموّه، مشوّش","Keep the other signals blurred.","BLERD"],
+      ["petch","pitch","عرض تقديمي، يسوّق فكرة","I'll pitch it to Telda.","PICH"],
+      ["provoider","provider","مزوّد بيانات","Switch the data provider.","pruh-VY-der"],
+      ["notofication","notification","إشعار","Send one notification to the admin.","noh-tuh-fih-KAY-shun"],
+      ["dublicated","duplicated","مكرر","Remove the duplicated users.","DOO-plih-kay-tid"],
+      ["cashed","cached","مخزَّن مؤقتًا","The old page is still cached.","KASHT"],
+      ["descide","decide","يقرر","Let the admin decide.","dih-SYD"],
+      ["sccsussfly","successfully","بنجاح","The build finished successfully.","suk-SES-fuh-lee"],
+      ["brosher · broser","browser","المتصفح","It's still pending in the browser.","BROW-zer"],
+      ["anythink","anything","أي شيء","Don't change anything else.","EN-ee-thing"],
+      ["suberadmin","super admin","المدير الأعلى","Only the super admin can approve it.","SOO-per AD-min"]
+    ]
+  },
+  {
+    t:"Letters in the wrong order", ar:"ترتيب الحروف مقلوب",
+    rule:"Your biggest group by far. Fast typing flips two letters — <code>singal</code>, <code>brnach</code>, <code>todya</code>. A spell-checker catches these; a quick re-read before sending catches them faster.",
+    w:[
+      ["singal · signls · singls · signlas · singlas","signal","إشارة، توصية","Fire the signal to test it.","SIG-nul"],
+      ["symblo · symble","symbol","رمز السهم","Search for the symbol, then click buy.","SIM-bul"],
+      ["wnat · iwant","want","يريد","I want to test the automation.","WANT"],
+      ["messegas","messages","رسائل","No messages reached Telegram.","MES-ij-iz"],
+      ["maissed","missed","فات","We missed the MAAL breakout.","MIST"],
+      ["happend · happned","happened","حدث","Tell me what happened yesterday.","HAP-und"],
+      ["yersterday","yesterday","أمس","No signals fired yesterday.","YES-ter-day"],
+      ["todya","today","اليوم","Today the market is quiet.","tuh-DAY"],
+      ["septamer","September","سبتمبر","The report covers September 20.","sep-TEM-ber"],
+      ["cleints","clients","عملاء","Notify the clients by Telegram.","KLY-unts"],
+      ["atuomatio · autoamtion · auomation · aotimation","automation","أتمتة","The automation plan costs 1500.","aw-tuh-MAY-shun"],
+      ["frontedn · fornend","frontend","الواجهة","Rebuild the frontend.","FRUNT-end"],
+      ["crateation","creation","إنشاء","Signal creation happens in the scheduler.","kree-AY-shun"],
+      ["chreated · crated","created","أنشأ","The signal was created at 10:15.","kree-AY-tid"],
+      ["opend","opened","فُتح","The order was opened at 12.","OH-pund"],
+      ["giude","guide","دليل","Read the deploy guide first.","GYD"],
+      ["gothering","gathering","تجميع","The extension is gathering the data.","GATH-er-ing"],
+      ["arrvie","arrive","يصل","The ticks arrive every minute.","uh-RYV"],
+      ["invated","invited","مدعو","Subscribers are invited to the group.","in-VY-tid"],
+      ["instide","inside","داخل","The value is inside the config file.","in-SYD"],
+      ["chech","check","يفحص","Check the production logs.","CHEK"],
+      ["regenrate","regenerate","يعيد التوليد","Regenerate the daily bars.","ree-JEN-uh-rayt"],
+      ["excute","execute","ينفذ","Execute the buy order.","EK-sih-kyoot"],
+      ["opertinities","opportunities","فرص","The scanner finds new opportunities daily.","ah-per-TOO-nuh-teez"],
+      ["arctuctres · archtuire · arcture","architecture","معمارية النظام","Improve the backend architecture.","AR-kih-tek-cher"],
+      ["brnach","branch","فرع","I switched to the new branch.","BRANCH"],
+      ["bulid","build","يبني","The build takes four minutes.","BILD"],
+      ["swatich","switch","يبدّل","Switch to the new branch.","SWICH"],
+      ["edidt · edite","edit","يعدّل","Edit the last line only.","ED-it"],
+      ["woards","words","كلمات","Highlight the wrong words.","WERDZ"],
+      ["requried","required","مطلوب","Volume confirmation is required.","rih-KWY-erd"],
+      ["complie","compile","يترجم الكود","The project won't compile.","kum-PYL"],
+      ["merage · meareg · mearge","merge","يدمج","Merge it before the release.","MERJ"],
+      ["dowonload · downlaod","download","تحميل","Download the report as a PDF.","DOWN-lohd"],
+      ["refrence","reference","مرجع","Keep the reference file open.","REF-runss"],
+      ["orcstrator","orchestrator","منسّق","The orchestrator runs every job.","OR-kis-tray-ter"],
+      ["storybaord · storybard · stoaryboard · storborad","storyboard","سيناريو مصوّر","Approve the storyboard first.","STOR-ee-bord"],
+      ["coulum · colum","column","عمود","Add a new column to the watchlist.","KOL-um"],
+      ["agian","again","مرة أخرى","The login failed again.","uh-GEN"],
+      ["varabils","variables","متغيرات","Rename these variables.","VAIR-ee-uh-bulz"],
+      ["geive","give","يعطي","Give me the reason it was vetoed.","GIV"],
+      ["ovaride · ovoride","override","يتجاوز","Don't override the user settings.","oh-ver-RYD"],
+      ["isindvadual","individual","فردي","Is this individual or shared?","in-dih-VIJ-oo-ul"],
+      ["inforation","information","معلومات","Add the missing information.","in-fer-MAY-shun"],
+      ["loclization","localization","ترجمة، توطين","Fix the localization file.","loh-kuh-luh-ZAY-shun"],
+      ["slids","slides","شرائح","Export the slides as a PDF.","SLYDZ"],
+      ["senairo","scenario","سيناريو","Write the failure scenario.","suh-NAIR-ee-oh"],
+      ["desgin","design","تصميم","Review the design first.","dih-ZYN"],
+      ["descritption · decription","description","وصف","Add a short description.","dih-SKRIP-shun"],
+      ["confermation","confirmation","تأكيد","Send the confirmation after the buy.","kon-fer-MAY-shun"],
+      ["deelte","delete","يحذف","Delete the duplicated rows.","dih-LEET"],
+      ["defulat","default","الافتراضي","Keep the default value.","dih-FAWLT"],
+      ["formual","formula","معادلة","The formula is wrong.","FOR-myuh-luh"],
+      ["finilize","finalize","ينهي","Finalize the release today.","FY-nuh-lyz"],
+      ["stopedn · stoped","stopped","توقف","The scheduler stopped at noon.","STAHPT"],
+      ["hotplat","hotplate","سخّان","Put the tube on the hotplate.","HOT-playt"],
+      ["mapp · mappoing","mapping","ربط","Fix the mapping in the resolver.","MAP-ing"],
+      ["whos","who","الذي، من","Remove users who have the same ID.","HOO"],
+      ["chery","cherry-pick","ينتقي كوميت","Cherry-pick it onto release.","CHER-ee pik"],
+      ["soket","socket","سوكيت","The socket closed early.","SOK-it"],
+      ["sor","for","لـ","The reviewer must not be working on a bug for mobile.","FOR"],
+      ["josn","JSON","جيسون","Return it as JSON.","JAY-sun"],
+      ["uisng","using","باستخدام","I'm using the new API.","YOO-zing"],
+      ["vlaue","value","قيمة","Keep the default value.","VAL-yoo"],
+      ["preivew · perview","preview","معاينة","Open the preview first.","PREE-vyoo"],
+      ["fuollow","follow","يتابع","Follow the steps in order.","FOL-oh"],
+      ["cluade","Claude","كلود","Ask Claude to review it.","KLAWD"],
+      ["balckbaord","blackboard","السبورة","Show the result on the blackboard.","BLAK-bord"],
+      ["deveploers","developers","المطوّرون","Make it readable for developers.","dih-VEL-uh-perz"],
+      ["fredige","fridge","ثلاجة","A marketplace for fridges and washing machines.","FRIJ"],
+      ["pritory","prioritize","يرتّب حسب الأولوية","Prioritize the tasks in each sprint.","pry-OR-ih-tyz"],
+      ["asigene","assign","يُسند","Assign the experiment to the class.","uh-SYN"],
+      ["opreation","operation","عملية","The operation timed out.","op-er-AY-shun"],
+      ["duiteis","duties","مهام، واجبات","List his duties and responsibilities.","DOO-teez"],
+      ["bundels","bundles","حِزم","The app bundles are too large.","BUN-dulz"],
+      ["quilty","quality","جودة","Keep the same answer quality.","KWOL-ih-tee"],
+      ["manula · mnula","manual","يدوي","Place the order with manual entry.","MAN-yoo-ul"],
+      ["anglur","Angular","أنجولار","Split the Angular components into three files.","ANG-gyuh-ler"]
+    ]
+  },
+  {
+    t:"Vowel confusion", ar:"حروف العلة",
+    rule:"Arabic writes short vowels rarely, so English <code>ou · ea · ui · io</code> get guessed. These are the ones the ear cannot help with — learn them by shape.",
+    w:[
+      ["becouse · becourse","because","لأن","It failed because the feed was stale.","bih-KUZ"],
+      ["reson","reason","سبب","Give me the reason it was vetoed.","REE-zun"],
+      ["voulme","volume","حجم التداول","The breakout needs volume confirmation.","VAHL-yoom"],
+      ["gess · geuess","guess","يخمّن","Don't guess, check the logs.","GES"],
+      ["menning","meaning","معنى","What's the meaning of this error?","MEE-ning"],
+      ["menstion","mention","يذكر","You didn't mention the stop loss.","MEN-shun"],
+      ["posoble","possible","ممكن","Is it possible to cancel the order?","PAH-suh-bul"],
+      ["suatable · sutable","suitable","مناسب","Pick a suitable entry price.","SOO-tuh-bul"],
+      ["increse","increase","يزيد","Increase the max risk to 12 percent.","in-KREES"],
+      ["hestory","history","تاريخ، سجل","Update the TradingView history.","HIS-tuh-ree"],
+      ["reviw","review","مراجعة","Do a code review before merge.","rih-VYOO"],
+      ["relase","release","إصدار","Push it to the release branch.","rih-LEES"],
+      ["channal","channel","قناة","Post it to the Telegram channel.","CHAN-ul"],
+      ["seetings · seeting","settings","إعدادات","Open the strategy settings.","SET-ingz"],
+      ["mobil","mobile","موبايل","Test it on mobile.","MOH-bul"],
+      ["allawed","allowed","مسموح","Only super admins are allowed.","uh-LOWD"],
+      ["devided","divided","مقسوم","The budget is divided per type.","dih-VY-did"],
+      ["draped","dropped","انخفض، هبط","Sell if the price dropped under 12.","DRAHPT"],
+      ["sesstion · sesstions","session","جلسة التداول","The session volume is above average.","SESH-un"],
+      ["demd","demo","حساب تجريبي","The demo account reads 3 signals.","DEH-moh"],
+      ["trad","trade","تداول، صفقة","Open the trade tab after login.","TRAYD"],
+      ["leasen","listen","يستمع","The org subscribes to listen to student progress.","LIS-un"],
+      ["steckholder","stakeholder","صاحب مصلحة","Share it with every stakeholder.","STAYK-hohl-der"],
+      ["complate","complete","يكتمل","Mark the task complete.","kum-PLEET"],
+      ["puse","paused","متوقف مؤقتًا","Automation will be paused for a few days.","PAWZD"],
+      ["pindding","pending","معلّق، قيد الانتظار","The order is still pending.","PEN-ding"],
+      ["retrueve","retrieve","يسترجع","Retrieve the last ten orders.","rih-TREEV"],
+      ["buffor","buffer","هامش احتياطي","Fill the team buffer first.","BUF-er"],
+      ["messanger","messenger","تطبيق مراسلة","Send it on Messenger.","MES-in-jer"],
+      ["manegment","management","إدارة","The management team approved it.","MAN-ij-munt"],
+      ["novamber","November","نوفمبر","The release is in November.","noh-VEM-ber"],
+      ["stuped","stupid","غبي","The old flow was stupid.","STOO-pid"],
+      ["responsable · responsabiltes","responsible","مسؤول","The platform is not responsible for analyst signals.","rih-SPON-suh-bul"],
+      ["bailder","builder","أداة البناء","Open the page builder.","BIL-der"]
+    ]
+  },
+  {
+    t:"Real word, wrong place", ar:"كلمة صحيحة في المكان الغلط",
+    rule:"The hardest kind: every word here is real English, so no spell-checker flags it. Each one means something else — the Arabic in brackets is what you actually wrote.",
+    w:[
+      ["wards","words","كلمات (wards = عنابر)","Add the words you use in replies.","WERDZ"],
+      ["founded · founeded","found","وُجد، لقى (founded = أسّس)","Why was it found on the daily tab only?","FOWND"],
+      ["effected","affected","متأثر (effected = نفّذ)","Fix every API affected by the change.","uh-FEK-tid"],
+      ["stop lose","stop loss","وقف الخسارة (lose = يخسر)","Move the stop loss to breakeven.","STOP LAWSS"],
+      ["till him","tell him","قوله (till = لحد ما)","Tell him automation is paused.","TEL him"],
+      ["i what","I want","أنا عايز (what = ماذا)","I want the whole-day volume direction.","eye WANT"],
+      ["mange","manage","يدير (mange = جرب الحيوانات)","The team will manage the whole cycle.","MAN-ij"],
+      ["conductions","conditions","شروط (conductions = توصيلات)","Add the missing conditions for prod.","kun-DISH-unz"],
+      ["lunching","launching","إطلاق (lunching = بيتغدّى)","We're launching next week.","LAWN-ching"],
+      ["no any","not any","مفيش أي (no any غلط نحويًا)","There is not any buy order at Mubasher.","not EN-ee"]
+    ]
+  }
+];
+
+const VOCAB = [
+  {
+    t:"Linking words & adverbs", ar:"كلمات الربط والظروف",
+    rule:"These words make a sentence sound fluent. They carry the logic (<code>unless</code>, <code>otherwise</code>, <code>regardless</code>) — learn them and your messages get shorter and clearer.",
+    w:[
+      ["already","بالفعل، سبق","The fix is already on release.","awl-RED-ee",1554],
+      ["instead","بدلًا من ذلك","Read the ticks instead of the candles.","in-STED",856],
+      ["exactly","بالضبط","The stop sits exactly at 12.94.","ig-ZAKT-lee",803],
+      ["actually","في الواقع، فعلًا","The signal actually fired at 10:15.","AK-choo-uh-lee",589],
+      ["rather","بالأحرى، بدلًا من","Use the close price rather than the high.","RATH-er",510],
+      ["itself","نفسه، بذاته","The page itself is fine.","it-SELF",455],
+      ["whether","ما إذا كان","Check whether the feed is still live.","WETH-er",449],
+      ["correctly","بشكل صحيح","The stop moved correctly to breakeven.","kuh-REKT-lee",368],
+      ["worth","يستاهل، يستحق","It's worth a second look.","WERTH",258],
+      ["silently","بصمت، دون تنبيه","The job failed silently for five days.","SY-lunt-lee",235],
+      ["cleanly","بشكل نظيف","The migration ran cleanly.","KLEEN-lee",206],
+      ["likely","على الأرجح","The feed is likely stale.","LYK-lee",177],
+      ["automatically","تلقائيًا","It deploys automatically on push.","aw-tuh-MAT-ik-lee",154],
+      ["whose","الذي يخصّه","Find the users whose plan expired.","HOOZ",152],
+      ["within","خلال، داخل","It fires within one minute.","with-IN",150],
+      ["immediately","فورًا","The alert fires immediately.","ih-MEE-dee-it-lee",138],
+      ["anywhere","في أي مكان","The key isn't used anywhere else.","EN-ee-wair",116],
+      ["twice","مرتين","The alert was sent twice.","TWYS",115],
+      ["deliberately","عن قصد، عمدًا","I deliberately left the old rule.","dih-LIB-er-it-lee",110],
+      ["otherwise","وإلا، بخلاف ذلك","Confirm first, otherwise skip it.","UTH-er-wyz",110],
+      ["entirely","تمامًا، بالكامل","That table is entirely empty.","en-TY-er-lee",103],
+      ["genuinely","فعلًا، بصدق","This one is genuinely a bug.","JEN-yoo-in-lee",101],
+      ["ahead","مقدّمًا، قدّام","Plan two sprints ahead.","uh-HED",92],
+      ["unless","إلا إذا","Don't sell unless volume confirms.","un-LES",89],
+      ["explicitly","صراحةً، بشكل واضح","Set the value explicitly.","ik-SPLIS-it-lee",85],
+      ["alongside","جنبًا إلى جنب مع","Ship the docs alongside the code.","uh-LONG-syd",85],
+      ["anyway","على أي حال","The test failed, but I pushed it anyway.","EN-ee-way",82],
+      ["roughly","تقريبًا","It takes roughly four minutes.","RUF-lee",76],
+      ["whenever","كلما","It retries whenever the feed drops.","wen-EV-er",70],
+      ["though","مع ذلك، رغم أن","It works, though it's slow.","THOH",70],
+      ["properly","كما ينبغي","The stop isn't saved properly.","PROP-er-lee",69],
+      ["beyond","أبعد من، يتجاوز","That's beyond today's scope.","bee-YOND",61],
+      ["neither","ولا أيٌّ منهما","Neither feed was live.","NEE-ther",59],
+      ["precisely","بدقة","That is precisely why it failed.","prih-SYS-lee",57],
+      ["previously","سابقًا","It previously sent ten alerts.","PREE-vee-us-lee",57],
+      ["regardless","بغض النظر","It runs regardless of the market.","rih-GARD-lis",57],
+      ["afterwards","بعد ذلك","Restart the backend afterwards.","AF-ter-werdz",53],
+      ["literally","حرفيًا","It literally never ran.","LIT-er-uh-lee",34],
+      ["despite","بالرغم من","It fired despite low volume.","dih-SPYT",33]
+    ]
+  },
+  {
+    t:"Describing the state of things", ar:"وصف الحالة",
+    rule:"How I describe data, code and systems. <code>stale</code>, <code>pending</code> and <code>untouched</code> show up in almost every status report I write you.",
+    w:[
+      ["whole","كامل، كله","Scan the whole market.","HOHL",363],
+      ["uncommitted","غير محفوظ في git","You have uncommitted changes.","un-kuh-MIT-id",316],
+      ["stale","قديم، غير محدَّث","The quote is three days stale.","STAYL",295],
+      ["pending","معلّق، قيد الانتظار","The order is still pending.","PEN-ding",272],
+      ["actual","الفعلي","The actual fill price was 12.10.","AK-choo-ul",264],
+      ["identical","متطابق","Both rows are identical.","eye-DEN-tih-kul",223],
+      ["blank","فارغ","The page loads blank.","BLANGK",216],
+      ["untouched","لم يُمَس","I left that file untouched.","un-TUCHT",211],
+      ["unchanged","بدون تغيير","The settings stay unchanged.","un-CHAYNJD",200],
+      ["optional","اختياري","The second target is optional.","OP-shuh-nul",157],
+      ["unrelated","لا علاقة له","That error is unrelated.","un-rih-LAY-tid",130],
+      ["straight","مباشرة، على طول","Go straight to the login page.","STRAYT",117],
+      ["interrupted","مقطوع، اتقطع","The upload was interrupted.","in-ter-RUP-tid",116],
+      ["explicit","صريح","Give it an explicit value.","ik-SPLIS-it",108],
+      ["truncated","مقصوص آخره","The log message is truncated.","TRUNG-kay-tid",105],
+      ["lazy","كسول، يُحمَّل عند الحاجة","Make the admin page lazy-loaded.","LAY-zee",101],
+      ["temporary","مؤقت","It's only a temporary fix.","TEM-puh-rair-ee",80],
+      ["stray","شارد، في غير مكانه","A stray file broke the build.","STRAY",78],
+      ["verbatim","حرفيًا كما هو","Copy the error verbatim.","ver-BAY-tim",76],
+      ["legacy","قديم موروث","Remove the legacy endpoint.","LEG-uh-see",76],
+      ["intact","سليم، كما هو","The data is still intact.","in-TAKT",68],
+      ["distinct","مميّز، مختلف","These are two distinct bugs.","dih-STINGKT",67],
+      ["stuck","عالق","The page is stuck on loading.","STUK",67],
+      ["compact","مضغوط، صغير الحجم","Use a compact table on mobile.","kum-PAKT",65],
+      ["honest","صادق، أمين","Give me an honest answer.","ON-ist",65],
+      ["consistent","متّسق، ثابت","The results are consistent.","kun-SIS-tunt",64],
+      ["leftover","متبقٍّ","Clean up the leftover logs.","LEFT-oh-ver",62],
+      ["absent","غائب، غير موجود","The field is absent from the response.","AB-sunt",62],
+      ["strict","صارم","Keep the volume rule strict.","STRIKT",54],
+      ["genuine","حقيقي","This is a genuine breakout.","JEN-yoo-in",51],
+      ["harmless","غير ضار","The warning is harmless.","HARM-lis",48],
+      ["idle","خامل","The worker sat idle all day.","EYE-dul",47],
+      ["canonical","الرسمي، القياسي","Use the canonical symbol name.","kuh-NON-ih-kul",45],
+      ["idempotent","يعطي نفس النتيجة لو تكرّر","The migration must be idempotent.","eye-DEM-puh-tunt",44],
+      ["dangling","معلّق بلا ربط","Remove the dangling reference.","DANG-gling",44],
+      ["cumulative","تراكمي","Show the cumulative profit.","KYOO-myuh-luh-tiv",43],
+      ["accurate","دقيق","The replay is accurate.","AK-yer-it",37],
+      ["orphan","يتيم، بلا أصل","Delete the orphan rows.","OR-fun",35],
+      ["authoritative","المصدر المعتمد","This file is the authoritative source.","uh-THOR-ih-tay-tiv",25],
+      ["opaque","غامض، غير واضح","The error message is opaque.","oh-PAYK",14]
+    ]
+  },
+  {
+    t:"Verbs of engineering work", ar:"أفعال الشغل",
+    rule:"The actions I report back to you. Many are plain English words with a tech meaning: code <code>lands</code>, a feed <code>stalls</code>, docs <code>drift</code>.",
+    w:[
+      ["confirm","يؤكد","Confirm the order before sending.","kun-FERM",680],
+      ["verify","يتحقق","Verify it on production.","VAIR-ih-fy",519],
+      ["guard","يحمي، حارس","Add a guard for empty data.","GARD",377],
+      ["sweep","جولة شاملة، يمسح الكل","Do one sweep over all the symbols.","SWEEP",268],
+      ["retry","يعيد المحاولة","The extension will retry in a minute.","ree-TRY",234],
+      ["probe","يستكشف، يفحص","Probe the server with one request.","PROHB",191],
+      ["capture","يلتقط","Capture the network request.","KAP-cher",188],
+      ["drift","ينحرف تدريجيًا","The docs drift away from the code.","DRIFT",141],
+      ["resolve","يحلّ","That resolves the crash.","rih-ZOLV",133],
+      ["land","يوصل الكود للفرع","The fix landed on release.","LAND",133],
+      ["trigger","يُطلق، يُشغّل","A push triggers the deploy.","TRIG-er",124],
+      ["surface","يُظهر للمستخدم","Surface the error to the user.","SER-fis",123],
+      ["scaffold","يبني الهيكل الأولي","Scaffold the new component.","SKAF-ohld",106],
+      ["emit","يُصدر","The scheduler emits one alert.","ih-MIT",94],
+      ["restore","يستعيد","Restore the settings backup.","rih-STOR",92],
+      ["strip","يُزيل، يجرّد","Strip the .CA suffix.","STRIP",89],
+      ["seed","يملأ ببيانات أولية","Seed the admin account.","SEED",84],
+      ["wire","يربط","Wire the button to the API.","WY-er",81],
+      ["rerun","يعيد التشغيل","Rerun the backtest.","ree-RUN",69],
+      ["reject","يرفض","The server rejects the upload.","rih-JEKT",66],
+      ["ship","يطلق للإنتاج","Ship it to production tonight.","SHIP",60],
+      ["inject","يحقن، يُدخل","Inject the script into the page.","in-JEKT",57],
+      ["bypass","يتخطى","Don't bypass the volume rule.","BY-pass",56],
+      ["dispatch","يُرسل، يوزّع","Dispatch the order to the broker.","dih-SPACH",53],
+      ["estimate","يقدّر، تقدير","Estimate the risk first.","ES-tih-mayt",52],
+      ["stall","يتوقف، يتعطل","The feed stalled at noon.","STAWL",49],
+      ["poll","يسأل بشكل دوري","The extension polls every minute.","POHL",48],
+      ["survive","ينجو، يصمد","The data survives a restart.","ser-VYV",42],
+      ["overwrite","يكتب فوق","Don't overwrite the user's data.","oh-ver-RYT",42],
+      ["mirror","يعكس، نسخة مطابقة","The page mirrors the watchlist.","MEER-er",36],
+      ["derive","يستنتج، يشتق","Derive the stop from the breakout low.","dih-RYV",31],
+      ["enforce","يفرض","The database enforces the unique key.","en-FORS",15],
+      ["expose","يكشف، يتيح","Don't expose the API key.","ik-SPOHZ",14],
+      ["interpret","يفسّر","How do you interpret this chart?","in-TER-prit",2]
+    ]
+  },
+  {
+    t:"Code-review nouns", ar:"مصطلحات المراجعة",
+    rule:"The nouns that show up when I explain a bug or a design. <code>fallback</code>, <code>contract</code> and <code>caveat</code> are worth knowing cold.",
+    w:[
+      ["fallback","بديل احتياطي","Use ThndrX as the fallback.","FAWL-bak",309],
+      ["contract","اتفاق الواجهة (عقد)","Don't break the API contract.","KON-trakt",216],
+      ["placeholder","نص مؤقت، عنصر نائب","Replace the placeholder text.","PLAY-sohl-der",196],
+      ["snapshot","لقطة لحظية","Save a snapshot every minute.","SNAP-shot",183],
+      ["scope","نطاق","That's out of scope for today.","SKOHP",121],
+      ["mismatch","عدم تطابق","There's a symbol mismatch.","MIS-mach",98],
+      ["wording","الصياغة","Change the wording of the alert.","WER-ding",92],
+      ["quota","حصة، حد مسموح","We hit the API quota.","KWOH-tuh",90],
+      ["expiry","تاريخ الانتهاء","Show the subscription expiry date.","ik-SPY-ree",77],
+      ["defect","عيب، خلل","That's a real defect.","DEE-fekt",74],
+      ["disclaimer","إخلاء مسؤولية","Add the disclaimer under every signal.","dis-KLAY-mer",74],
+      ["regression","رجوع خطأ بعد إصلاحه","Add a test to catch regressions.","rih-GRESH-un",69],
+      ["bulk","بالجملة، دفعة واحدة","Do a bulk update on all users.","BULK",69],
+      ["compliance","الالتزام باللوائح","FRA compliance comes first.","kum-PLY-uns",65],
+      ["caveat","تحذير، استثناء","One caveat: it's post-close data.","KAV-ee-at",61],
+      ["stub","بديل وهمي للاختبار","Stub the broker in tests.","STUB",60],
+      ["evidence","دليل","Show me the evidence.","EV-ih-duns",56],
+      ["discipline","انضباط","Risk discipline matters most.","DIS-uh-plin",53],
+      ["outcome","النتيجة","Record the outcome of each trade.","OWT-kum",53],
+      ["fixture","بيانات اختبار ثابتة","Load the test fixture.","FIKS-cher",51],
+      ["blocker","عائق","The login bug is the blocker.","BLOK-er",51],
+      ["verdict","حُكم، نتيجة","The verdict: the veto was right.","VER-dikt",48],
+      ["dependency","اعتمادية","Remove the unused dependency.","dih-PEN-dun-see",47],
+      ["telemetry","بيانات قياس للمتابعة","Log it as telemetry only.","tuh-LEM-uh-tree",41],
+      ["assertion","تأكيد داخل الاختبار","The assertion failed.","uh-SER-shun",40],
+      ["convention","عُرف، اتفاقية","Follow the naming convention.","kun-VEN-shun",39],
+      ["advisory","استشاري، للتنبيه فقط","It's advisory only, not a gate.","ad-VY-zuh-ree",38],
+      ["breakdown","تفصيل، تفكيك","Give me a breakdown by type.","BRAYK-down",36],
+      ["semantics","المعنى الدقيق، دلالة","The semantics of that field changed.","sih-MAN-tiks",34],
+      ["collision","تصادم","A name collision broke the import.","kuh-LIZH-un",30],
+      ["provenance","مصدر الأصل","Track the provenance of each tick.","PROV-uh-nuns",25],
+      ["footprint","الأثر، الحجم المستهلك","Keep the memory footprint small.","FUT-print",22]
+    ]
+  },
+  {
+    t:"Trading & risk", ar:"تداول ومخاطر",
+    rule:"The market words from Forsa reports. <code>regime</code> and <code>expectancy</code> are the two I use to explain why the scanner is quiet or why a strategy works.",
+    w:[
+      ["portfolio","محفظة","Review your portfolio weekly.","port-FOH-lee-oh",195],
+      ["breakout","اختراق","Wait for a confirmed breakout.","BRAYK-owt",191],
+      ["resistance","مقاومة","Price closed above resistance.","rih-ZIS-tuns",179],
+      ["auction","المزاد (جلسة الافتتاح)","The auction sets the open price.","AWK-shun",149],
+      ["quantity","الكمية","Set the order quantity.","KWON-tih-tee",139],
+      ["swing","تداول متوسط المدى","It's a swing trade, not intraday.","SWING",100],
+      ["ratio","نسبة","Keep the reward-to-risk ratio at 2.","RAY-shee-oh",86],
+      ["trend","اتجاه","Trade with the trend.","TREND",76],
+      ["floor","أرضية، حد أدنى","Set a floor on the stop distance.","FLOR",71],
+      ["allocation","توزيع المبالغ","Change the budget allocation.","al-uh-KAY-shun",69],
+      ["trailing","متحرك يتبع السعر","Move to a trailing stop.","TRAY-ling",59],
+      ["surge","قفزة مفاجئة","A volume surge at the open.","SERJ",57],
+      ["spread","الفرق بين العرض والطلب","The spread is too wide.","SPRED",54],
+      ["ledger","دفتر القيود","Every order goes in the ledger.","LEJ-er",47],
+      ["regime","حالة السوق العامة","This is a low-volume regime.","ray-ZHEEM",46],
+      ["pivot","نقطة ارتكاز","Price bounced off the pivot.","PIV-ut",42],
+      ["expectancy","العائد المتوقع للصفقة","The strategy has positive expectancy.","ik-SPEK-tun-see",40],
+      ["universe","مجموعة الأسهم المفحوصة","The scan universe is 107 stocks.","YOO-nih-vers",40],
+      ["veto","رفض، فيتو","The stop rule vetoed the entry.","VEE-toh",37],
+      ["ceiling","سقف","The price hit the ceiling.","SEE-ling",32],
+      ["wick","ذيل الشمعة","The candle has a long upper wick.","WIK",29],
+      ["liquid","ذو سيولة عالية","Trade only liquid stocks.","LIK-wid",18]
+    ]
+  }
+];
+
+const PLAY = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg>';
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- render ---------- */
+let total = 0, nMiss = 0, nVocab = 0;
+const bold = (phrase, word) => esc(phrase).replace(
+  new RegExp('\\b(' + word.replace(/-/g, '\\-') + ")(s|d|ed|es|ing|'s)?\\b", 'i'), m => '<b>' + m + '</b>');
+
+function row(id, kind, bad, good, ar, phrase, say, freq, grp) {
+  const top = kind === 'miss'
+    ? `<span class="bad">${esc(bad)}</span><span class="arrow">→</span><span class="good">${esc(good)}</span>`
+    : `<span class="good">${esc(good)}</span><span class="freq" title="Times Claude used it">×${freq}</span>`;
+  return `<div class="word ${kind}" id="w${id}" data-k="${esc(((bad||'')+' '+good+' '+ar).toLowerCase())}" data-p="${esc(phrase.toLowerCase())}">
+    <div class="spell">${top}<span class="gtag">${esc(grp || '')}</span></div>
+    <div class="ar">${esc(ar)}</div>
+    <div class="line2">
+      <span class="say"><button class="play" data-say="${esc(good)}" aria-label="Hear ${esc(good)}">${PLAY}</button><code>${esc(say)}</code></span>
+      <span class="phrase">${bold(phrase, good)} <button class="play ghost" data-say="${esc(phrase)}" aria-label="Hear the phrase">${PLAY}</button></span>
+      <button class="mark" data-id="${id}" aria-label="Mark ${esc(good)} as learned" aria-pressed="false">✓</button>
+    </div>
+  </div>`;
+}
+
+function section(g, n, rows, part) {
+  return `<section data-part="${part}">
+    <div class="shead"><h2>${n}. ${g.t}</h2><span class="ar">${g.ar}</span><span class="n">${g.w.length} words</span></div>
+    <p class="srule">${g.rule}</p>${rows}
+  </section>`;
+}
+
+let html = '<div class="part" data-part="miss"><h2 class="ptitle">Words you misspelled</h2><p class="psub">Found in your own messages. The red one is what you typed.</p></div>';
+GROUPS.forEach((g, gi) => {
+  nMiss += g.w.length;
+  html += section(g, gi + 1, g.w.map(([bad, good, ar, phrase, say], wi) =>
+    row(gi + '-' + wi, 'miss', bad, good, ar, phrase, say, '', g.t)).join(''), 'miss');
+});
+html += '<div class="part" data-part="vocab"><h2 class="ptitle">Words Claude uses in replies</h2><p class="psub">The most frequent non-basic words in my 11,954 replies to you. ×N is how many times I used it.</p></div>';
+VOCAB.forEach((g, gi) => {
+  nVocab += g.w.length;
+  html += section(g, gi + 1, g.w.map(([good, ar, phrase, say, freq], wi) =>
+    row('v' + gi + '-' + wi, 'vocab', '', good, ar, phrase, say, freq, 'Claude · ' + g.t)).join(''), 'vocab');
+});
+total = nMiss + nVocab;
+document.getElementById('list').innerHTML = html;
+document.getElementById('cMiss').textContent = nMiss;
+document.getElementById('cVocab').textContent = nVocab;
+
+/* ---------- speech ---------- */
+const note = document.getElementById('note');
+const synth = window.speechSynthesis;
+let voice = null, slow = false;
+
+if (!synth) {
+  note.hidden = false;
+  note.textContent = 'This browser has no built-in speech, so the ▶ buttons are silent. Everything else works, and the page still prints.';
+  document.querySelectorAll('.play').forEach(b => b.disabled = true);
+} else {
+  const pick = () => {
+    const v = synth.getVoices();
+    voice = v.find(x => x.lang === 'en-US' && /samantha|alex|google us/i.test(x.name))
+         || v.find(x => x.lang === 'en-US')
+         || v.find(x => x.lang && x.lang.startsWith('en')) || null;
+  };
+  pick();
+  synth.addEventListener('voiceschanged', pick);
+}
+
+let active = null;
+function speak(text, btn) {
+  if (!synth) return;
+  synth.cancel();
+  if (active) { active.classList.remove('on'); }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  if (voice) u.voice = voice;
+  u.rate = slow ? 0.62 : 0.95;
+  u.pitch = 1;
+  btn.classList.add('on'); active = btn;
+  const off = () => { btn.classList.remove('on'); if (active === btn) active = null; };
+  u.onend = off; u.onerror = off;
+  synth.speak(u);
+}
+
+/* ---------- progress ---------- */
+const KEY = 'spelling-blind-spots-done';
+let done = new Set();
+try { done = new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) {}
+
+function paint() {
+  document.querySelectorAll('.word').forEach(w => {
+    const id = w.id.slice(1);
+    const on = done.has(id);
+    w.classList.toggle('done', on);
+    const m = w.querySelector('.mark');
+    if (m) m.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  document.getElementById('progtxt').textContent = done.size + ' / ' + total;
+  document.getElementById('barfill').style.width = (done.size / total * 100) + '%';
+}
+paint();
+
+/* ---------- interaction ---------- */
+document.addEventListener('click', e => {
+  const play = e.target.closest('.play');
+  if (play) { speak(play.dataset.say, play); return; }
+
+  const mark = e.target.closest('.mark');
+  if (mark) {
+    const id = mark.dataset.id;
+    done.has(id) ? done.delete(id) : done.add(id);
+    try { localStorage.setItem(KEY, JSON.stringify([...done])); } catch (err) {}
+    paint();
+    return;
+  }
+
+  if (document.body.classList.contains('practice')) {
+    const w = e.target.closest('.word');
+    if (w) w.classList.toggle('shown');
+  }
+});
+
+const practiceBtn = document.getElementById('practice');
+practiceBtn.addEventListener('click', () => {
+  const on = practiceBtn.getAttribute('aria-pressed') === 'true';
+  practiceBtn.setAttribute('aria-pressed', on ? 'false' : 'true');
+  document.body.classList.toggle('practice', !on);
+  if (on) document.querySelectorAll('.word.shown').forEach(w => w.classList.remove('shown'));
+});
+
+const slowBtn = document.getElementById('slow');
+slowBtn.addEventListener('click', () => {
+  slow = slowBtn.getAttribute('aria-pressed') !== 'true';
+  slowBtn.setAttribute('aria-pressed', slow ? 'true' : 'false');
+});
+
+document.getElementById('print').addEventListener('click', () => window.print());
+
+const q = document.getElementById('q');
+let show = 'all';
+function applyFilter() {
+  const t = q.value.trim().toLowerCase();
+  const rx = new RegExp('(^|[\\s·/(،-])' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const rows = [...document.querySelectorAll('.word')];
+  const inPart = w => show === 'all' || w.classList.contains(show);
+  let byWord = !t || rows.some(w => inPart(w) && rx.test(w.dataset.k));
+  let hits = 0;
+  rows.forEach(w => {
+    const ok = inPart(w) && (!t || (byWord ? rx.test(w.dataset.k) : w.dataset.p.includes(t)));
+    w.hidden = !ok; if (ok) hits++;
+  });
+  const hint = document.getElementById('hint');
+  hint.hidden = !t || byWord || hits === 0;
+  hint.textContent = 'No word starts with “' + q.value.trim() + '” — showing example sentences that contain it.';
+  document.querySelectorAll('section').forEach(s => {
+    s.hidden = ![...s.querySelectorAll('.word')].some(w => !w.hidden);
+  });
+  document.querySelectorAll('.part').forEach(p => {
+    p.hidden = ![...document.querySelectorAll('section[data-part="' + p.dataset.part + '"]')].some(s => !s.hidden);
+  });
+  document.getElementById('empty').hidden = hits > 0;
+  const was = document.body.classList.contains('searching');
+  document.body.classList.toggle('searching', !!t);
+  if (t && !was) document.querySelector('.controls').scrollIntoView({block: 'start'});
+}
+q.addEventListener('input', applyFilter);
+document.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => {
+  show = b.dataset.show;
+  document.querySelectorAll('[data-show]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  applyFilter();
+}));
+</script>
+</body>
+</html>
